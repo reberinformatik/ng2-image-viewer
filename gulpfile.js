@@ -47,12 +47,18 @@ gulp.task('inline-resources', function () {
 /**
  * 4. Run the Angular compiler, ngc, on the /.tmp folder. This will output all
  *    compiled modules to the /build folder.
- *
- *    As of Angular 5, ngc accepts an array and no longer returns a promise.
  */
 gulp.task('ngc', function () {
-  ngc([ '--project', `${tmpFolder}/tsconfig.es5.json` ]);
-  return Promise.resolve()
+  return ngc({
+    project: `${tmpFolder}/tsconfig.es5.json`
+  })
+    .then((exitCode) => {
+      if (exitCode === 1) {
+        // This error is caught in the 'compile' task by the runSequence method callback
+        // so that when ngc fails to compile, the whole compile process stops running
+        throw new Error('ngc compilation failed');
+      }
+    });
 });
 
 /**
@@ -125,7 +131,7 @@ gulp.task('rollup:umd', function () {
       // The name to use for the module for UMD/IIFE bundles
       // (required for bundles with exports)
       // See "name" in https://rollupjs.org/#core-functionality
-      name: 'ng2-image-viewer',
+      name: 'ng2-image-viewer-rit',
 
       // See "globals" in https://rollupjs.org/#core-functionality
       globals: {
@@ -133,7 +139,7 @@ gulp.task('rollup:umd', function () {
       }
 
     }))
-    .pipe(rename('ng2-image-viewer.umd.js'))
+    .pipe(rename('ng2-image-viewer-rit.umd.js'))
     .pipe(gulp.dest(distFolder));
 });
 

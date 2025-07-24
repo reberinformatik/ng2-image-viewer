@@ -21,8 +21,8 @@
     "annotateForClosureCompiler": true,
     "strictMetadataEmit": true,
     "skipTemplateCodegen": true,
-    "flatModuleOutFile": "ng2-image-viewer.js",
-    "flatModuleId": "ng2-image-viewer"
+    "flatModuleOutFile": "ng2-image-viewer-rit.js",
+    "flatModuleId": "ng2-image-viewer-rit"
   },
   "files": [
     "./index.ts"

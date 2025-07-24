@@ -1,22 +1,17 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
 exports.__esModule = true;
 var core_1 = require("@angular/core");
+var iv_viewer_1 = require("iv-viewer");
+var iv_viewer_2 = require("iv-viewer");
 /**
  * @author Breno Prata - 22/12/2017
  */
-var ImageViewerComponent = /** @class */ (function () {
-    function ImageViewerComponent() {
+var ImageViewerComponent = (function () {
+    function ImageViewerComponent(renderer) {
+        this.renderer = renderer;
         this.BASE_64_IMAGE = 'data:image/png;base64,';
         this.BASE_64_PNG = this.BASE_64_IMAGE + " ";
-        this.BASE_64_PDF = 'data:application/pdf;base64, ';
         this.ROTACAO_PADRAO_GRAUS = 90;
-        this.TOTAL_ROTACAO_GRAUS_VERTICAL = this.ROTACAO_PADRAO_GRAUS * 3;
         this.rotate = true;
         this.download = true;
         this.fullscreen = true;
@@ -38,10 +33,10 @@ var ImageViewerComponent = /** @class */ (function () {
         this.zoomOutTooltipLabel = 'Zoom Out';
         this.downloadTooltipLabel = 'Download';
         this.showPDFOnlyLabel = 'Show only PDF';
+        this.openInNewTabTooltipLabel = 'Open in new tab';
         this.enableTooltip = true;
         this.onNext = new core_1.EventEmitter();
         this.onPrevious = new core_1.EventEmitter();
-        this.mostrarPainelOpcoes = true;
         this.showOnlyPDF = false;
         this.zoomPercent = 100;
     }
@@ -61,18 +56,14 @@ var ImageViewerComponent = /** @class */ (function () {
         }
     };
     ImageViewerComponent.prototype.inicializarCores = function () {
-        $('.inline-icon').css('background-color', this.primaryColor);
-        $('.footer-info').css('background-color', this.primaryColor);
-        $('.footer-icon').css('color', this.buttonsColor);
-        $('.footer-icon').hover(function () {
-            $(this).css('color', this.buttonsHover);
-        });
+        this.setStyleClass('inline-icon', 'background-color', this.primaryColor);
+        this.setStyleClass('footer-info', 'background-color', this.primaryColor);
+        this.setStyleClass('footer-icon', 'color', this.buttonsColor);
     };
     ImageViewerComponent.prototype.ngOnChanges = function (changes) {
         this.imagesChange(changes);
         this.primaryColorChange(changes);
         this.buttonsColorChange(changes);
-        this.buttonsHoverChange(changes);
         this.defaultDownloadNameChange(changes);
     };
     ImageViewerComponent.prototype.zoomIn = function () {
@@ -80,19 +71,21 @@ var ImageViewerComponent = /** @class */ (function () {
         this.viewer.zoom(this.zoomPercent);
     };
     ImageViewerComponent.prototype.zoomOut = function () {
-        if (this.zoomPercent == 100)
+        if (this.zoomPercent === 100) {
             return;
+        }
         this.zoomPercent -= 10;
-        if (this.zoomPercent < 0)
+        if (this.zoomPercent < 0) {
             this.zoomPercent = 0;
+        }
         this.viewer.zoom(this.zoomPercent);
     };
     ImageViewerComponent.prototype.primaryColorChange = function (changes) {
         var _this = this;
         if (changes['primaryColor'] || changes['showOptions']) {
             setTimeout(function () {
-                $('.inline-icon').css('background-color', _this.primaryColor);
-                $('.footer-info').css('background-color', _this.primaryColor);
+                _this.setStyleClass('inline-icon', 'background-color', _this.primaryColor);
+                _this.setStyleClass('footer-info', 'background-color', _this.primaryColor);
             }, 350);
         }
     };
@@ -101,15 +94,8 @@ var ImageViewerComponent = /** @class */ (function () {
         if (changes['buttonsColor'] || changes['rotate'] || changes['download']
             || changes['fullscreen']) {
             setTimeout(function () {
-                $('.footer-icon').css('color', _this.buttonsColor);
+                _this.setStyleClass('footer-icon', 'color', _this.buttonsColor);
             }, 350);
-        }
-    };
-    ImageViewerComponent.prototype.buttonsHoverChange = function (changes) {
-        if (changes['buttonsHover']) {
-            $('.footer-icon').hover(function () {
-                $(this).css('color', this.buttonsHover);
-            });
         }
     };
     ImageViewerComponent.prototype.defaultDownloadNameChange = function (changes) {
@@ -132,12 +118,18 @@ var ImageViewerComponent = /** @class */ (function () {
     };
     ImageViewerComponent.prototype.inicializarImageViewer = function () {
         this.indexImagemAtual = 1;
-        this.totalImagens = this.images.length;
-        this.wrapper = $("#" + this.idContainer);
-        this.curSpan = this.wrapper.find('.current');
-        this.viewer = ImageViewer(this.wrapper.find('.image-container'));
-        this.wrapper.find('.total').html(this.totalImagens);
         this.rotacaoImagemAtual = 0;
+        this.totalImagens = this.images.length;
+        if (this.viewer) {
+            this.wrapper.querySelector('.total').innerHTML = this.totalImagens;
+            return;
+        }
+        this.wrapper = document.getElementById("" + this.idContainer);
+        if (this.wrapper) {
+            this.curSpan = this.wrapper.querySelector('#current');
+            this.viewer = new iv_viewer_1["default"](this.wrapper.querySelector('.image-container'));
+            this.wrapper.querySelector('.total').innerHTML = this.totalImagens;
+        }
     };
     ImageViewerComponent.prototype.showImage = function () {
         this.prepararTrocaImagem();
@@ -145,12 +137,16 @@ var ImageViewerComponent = /** @class */ (function () {
         if (this.isPDF()) {
             this.carregarViewerPDF();
         }
+        else if (this.isURlImagem()) {
+            imgObj = this.getImagemAtual();
+            this.stringDownloadImagem = this.getImagemAtual();
+        }
         else {
             imgObj = this.BASE_64_PNG + this.getImagemAtual();
             this.stringDownloadImagem = this.BASE_64_IMAGE + this.getImagemAtual();
         }
         this.viewer.load(imgObj, imgObj);
-        this.curSpan.html(this.indexImagemAtual);
+        this.curSpan.innerHTML = this.indexImagemAtual;
         this.inicializarCores();
     };
     ImageViewerComponent.prototype.carregarViewerPDF = function () {
@@ -159,32 +155,48 @@ var ImageViewerComponent = /** @class */ (function () {
         this.injetarIframe(widthIframe, heightIframe);
     };
     ImageViewerComponent.prototype.injetarIframe = function (widthIframe, heightIframe) {
-        $("<iframe class=\"iframeViewer\"\n        style=\"width: " + widthIframe + "px; height: " + heightIframe + "px\"\n        src=\"" + this.converterPDFBase64ParaBlob() + "\"\n       </iframe>").appendTo('.iv-image-wrap');
+        var ivImageWrap = document.getElementById(this.idContainer).getElementsByClassName('iv-image-wrap').item(0);
+        var iframe = document.createElement('iframe');
+        iframe.id = this.getIdIframe();
+        iframe.style.width = widthIframe + "px";
+        iframe.style.height = heightIframe + "px";
+        iframe.src = "" + this.converterPDFBase64ParaBlob();
+        this.renderer.appendChild(ivImageWrap, iframe);
     };
     ImageViewerComponent.prototype.getTamanhoIframe = function () {
-        var widthIframe = parseFloat($("#" + this.idContainer).css('width'));
-        var heightIframe = parseFloat($("#" + this.idContainer).css('height'));
+        var container = document.getElementById(this.idContainer);
+        var widthIframe = container.offsetWidth;
+        var heightIframe = container.offsetHeight;
         return { widthIframe: widthIframe, heightIframe: heightIframe };
     };
     ImageViewerComponent.prototype.esconderBotoesImageViewer = function () {
-        $('.iv-loader').css('visibility', 'hidden');
-        $('.options-image-viewer').css('visibility', 'hidden');
+        this.setStyleClass('iv-loader', 'visibility', 'hidden');
+        this.setStyleClass('options-image-viewer', 'visibility', 'hidden');
     };
     ImageViewerComponent.prototype.isPDF = function () {
         return this.getImagemAtual().startsWith('JVBE') || this.getImagemAtual().startsWith('0M8R');
+    };
+    ImageViewerComponent.prototype.isURlImagem = function () {
+        return this.getImagemAtual().match(new RegExp(/^(https|http|www\.|blob)/g));
     };
     ImageViewerComponent.prototype.prepararTrocaImagem = function () {
         this.rotacaoImagemAtual = 0;
         this.limparCacheElementos();
     };
     ImageViewerComponent.prototype.limparCacheElementos = function () {
-        $('.iframeViewer').remove();
-        $('.iv-large-image').remove();
-        $('.iv-loader').css('visibility', 'auto');
-        $('.options-image-viewer').css('visibility', 'inherit');
-    };
-    ImageViewerComponent.prototype.getPdfBase64 = function () {
-        return "" + this.BASE_64_PDF + this.getImagemAtual();
+        var container = document.getElementById(this.idContainer);
+        var iframeElement = document.getElementById(this.getIdIframe());
+        var ivLargeImage = document.getElementById(this.idContainer).getElementsByClassName('iv-large-image').item(0);
+        if (iframeElement) {
+            this.renderer.removeChild(container, iframeElement);
+            if (ivLargeImage) {
+                this.renderer.removeChild(container, ivLargeImage);
+            }
+        }
+        if (iframeElement) {
+        }
+        this.setStyleClass('iv-loader', 'visibility', 'auto');
+        this.setStyleClass('options-image-viewer', 'visibility', 'inherit');
     };
     ImageViewerComponent.prototype.proximaImagem = function () {
         this.isImagemVertical = false;
@@ -234,7 +246,7 @@ var ImageViewerComponent = /** @class */ (function () {
         this.zoomPercent = 100;
         this.viewer.zoom(this.zoomPercent);
         var timeout = 800;
-        if (this.viewer.zoomValue === this.zoomPercent) {
+        if (this.viewer._state.zoomValue === this.zoomPercent) {
             timeout = 0;
         }
         return timeout;
@@ -249,43 +261,63 @@ var ImageViewerComponent = /** @class */ (function () {
         this.carregarImagem(novaRotacao, scale, isAnimacao);
     };
     ImageViewerComponent.prototype.getScale = function () {
-        return (parseFloat($('.iv-large-image').css('width')) - (parseFloat($("#" + this.idContainer).css('height')))) * 2.3 / (parseFloat($("#" + this.idContainer).css('height')));
+        var containerElement = document.getElementById(this.idContainer);
+        var ivLargeImageElement = document.getElementById(this.idContainer).getElementsByClassName('iv-large-image').item(0);
+        var diferencaTamanhoImagem = ivLargeImageElement.clientWidth - containerElement.clientHeight;
+        if (diferencaTamanhoImagem >= 250 && diferencaTamanhoImagem < 300) {
+            return (ivLargeImageElement.clientWidth - containerElement.clientHeight) / (containerElement.clientHeight) - 0.1;
+        }
+        else if (diferencaTamanhoImagem >= 300 && diferencaTamanhoImagem < 400) {
+            return ((ivLargeImageElement.clientWidth - containerElement.clientHeight) / (containerElement.clientHeight)) - 0.15;
+        }
+        else if (diferencaTamanhoImagem >= 400) {
+            return ((ivLargeImageElement.clientWidth - containerElement.clientHeight) / (containerElement.clientHeight)) - 0.32;
+        }
+        return 0.6;
     };
     ImageViewerComponent.prototype.isImagemSobrepondoNaVertical = function () {
         var margemErro = 5;
-        return parseFloat($("#" + this.idContainer).css('height')) < parseFloat($('.iv-large-image').css('width')) + margemErro;
+        var containerElement = document.getElementById(this.idContainer);
+        var ivLargeImageElement = document.getElementById(this.idContainer).getElementsByClassName('iv-large-image').item(0);
+        return containerElement.clientHeight < ivLargeImageElement.clientWidth + margemErro;
     };
     ImageViewerComponent.prototype.carregarImagem = function (novaRotacao, scale, isAnimacao) {
         var _this = this;
         if (isAnimacao === void 0) { isAnimacao = true; }
         if (isAnimacao) {
-            this.adicionarAnimacao('.iv-snap-image');
-            this.adicionarAnimacao('.iv-large-image');
+            this.adicionarAnimacao('iv-snap-image');
+            this.adicionarAnimacao('iv-large-image');
         }
-        this.adicionarRotacao('.iv-snap-image', novaRotacao, scale);
-        this.adicionarRotacao('.iv-large-image', novaRotacao, scale);
+        this.adicionarRotacao('iv-snap-image', novaRotacao, scale);
+        this.adicionarRotacao('iv-large-image', novaRotacao, scale);
         setTimeout(function () {
             if (isAnimacao) {
-                _this.retirarAnimacao('.iv-snap-image');
-                _this.retirarAnimacao('.iv-large-image');
+                _this.retirarAnimacao('iv-snap-image');
+                _this.retirarAnimacao('iv-large-image');
             }
         }, 501);
     };
     ImageViewerComponent.prototype.retirarAnimacao = function (componente) {
-        $(componente).css({ 'transition': "auto" });
+        this.setStyleClass(componente, 'transition', 'auto');
     };
     ImageViewerComponent.prototype.adicionarRotacao = function (componente, novaRotacao, scale) {
-        $(componente).css({ 'transform': novaRotacao + " " + scale });
+        this.setStyleClass(componente, 'transform', novaRotacao + " " + scale);
     };
     ImageViewerComponent.prototype.adicionarAnimacao = function (componente) {
-        $(componente).css({ 'transition': "0.5s linear" });
+        this.setStyleClass(componente, 'transition', "0.5s linear");
     };
     ImageViewerComponent.prototype.mostrarFullscreen = function () {
         var _this = this;
         var timeout = this.resetarZoom();
         setTimeout(function () {
-            _this.viewerFullscreen = ImageViewer();
-            var imgSrc = _this.BASE_64_PNG + _this.getImagemAtual();
+            _this.viewerFullscreen = new iv_viewer_2.FullScreenViewer();
+            var imgSrc;
+            if (_this.isURlImagem()) {
+                imgSrc = _this.getImagemAtual();
+            }
+            else {
+                imgSrc = _this.BASE_64_PNG + _this.getImagemAtual();
+            }
             _this.viewerFullscreen.show(imgSrc, imgSrc);
             _this.atualizarRotacao(false);
         }, timeout);
@@ -316,91 +348,62 @@ var ImageViewerComponent = /** @class */ (function () {
         this.showOnlyPDF = !this.showOnlyPDF;
         this.proximaImagem();
     };
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "idContainer");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "images");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "rotate");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "download");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "fullscreen");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "resetZoom");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "loadOnInit");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "showOptions");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "zoomInButton");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "zoomOutButton");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "showPDFOnlyOption");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "primaryColor");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "buttonsColor");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "buttonsHover");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "defaultDownloadName");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "rotateRightTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "rotateLeftTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "resetZoomTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "fullscreenTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "zoomInTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "zoomOutTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "downloadTooltipLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "showPDFOnlyLabel");
-    __decorate([
-        core_1.Input()
-    ], ImageViewerComponent.prototype, "enableTooltip");
-    __decorate([
-        core_1.Output()
-    ], ImageViewerComponent.prototype, "onNext");
-    __decorate([
-        core_1.Output()
-    ], ImageViewerComponent.prototype, "onPrevious");
-    ImageViewerComponent = __decorate([
-        core_1.Component({
-            selector: 'app-image-viewer',
-            templateUrl: './image-viewer.component.html',
-            styleUrls: ['./image-viewer.component.scss']
-        })
-    ], ImageViewerComponent);
+    ImageViewerComponent.prototype.setStyleClass = function (nomeClasse, nomeStyle, cor) {
+        var cont;
+        var listaElementos = document.getElementById(this.idContainer).getElementsByClassName(nomeClasse);
+        for (cont = 0; cont < listaElementos.length; cont++) {
+            this.renderer.setStyle(listaElementos.item(cont), nomeStyle, cor);
+        }
+    };
+    ImageViewerComponent.prototype.atualizarCorHoverIn = function (event) {
+        this.renderer.setStyle(event.srcElement, 'color', this.buttonsHover);
+    };
+    ImageViewerComponent.prototype.atualizarCorHoverOut = function (event) {
+        this.renderer.setStyle(event.srcElement, 'color', this.buttonsColor);
+    };
+    ImageViewerComponent.prototype.getIdIframe = function () {
+        return this.idContainer + '-iframe';
+    };
+    ImageViewerComponent.decorators = [
+        { type: core_1.Component, args: [{
+                    selector: 'app-image-viewer',
+                    templateUrl: './image-viewer.component.html',
+                    styleUrls: ['./image-viewer.component.scss']
+                },] },
+    ];
+    /** @nocollapse */
+    ImageViewerComponent.ctorParameters = function () { return [
+        { type: core_1.Renderer2 },
+    ]; };
+    ImageViewerComponent.propDecorators = {
+        'idContainer': [{ type: core_1.Input },],
+        'images': [{ type: core_1.Input },],
+        'rotate': [{ type: core_1.Input },],
+        'download': [{ type: core_1.Input },],
+        'fullscreen': [{ type: core_1.Input },],
+        'resetZoom': [{ type: core_1.Input },],
+        'loadOnInit': [{ type: core_1.Input },],
+        'showOptions': [{ type: core_1.Input },],
+        'zoomInButton': [{ type: core_1.Input },],
+        'zoomOutButton': [{ type: core_1.Input },],
+        'showPDFOnlyOption': [{ type: core_1.Input },],
+        'primaryColor': [{ type: core_1.Input },],
+        'buttonsColor': [{ type: core_1.Input },],
+        'buttonsHover': [{ type: core_1.Input },],
+        'defaultDownloadName': [{ type: core_1.Input },],
+        'rotateRightTooltipLabel': [{ type: core_1.Input },],
+        'rotateLeftTooltipLabel': [{ type: core_1.Input },],
+        'resetZoomTooltipLabel': [{ type: core_1.Input },],
+        'fullscreenTooltipLabel': [{ type: core_1.Input },],
+        'zoomInTooltipLabel': [{ type: core_1.Input },],
+        'zoomOutTooltipLabel': [{ type: core_1.Input },],
+        'downloadTooltipLabel': [{ type: core_1.Input },],
+        'showPDFOnlyLabel': [{ type: core_1.Input },],
+        'openInNewTabTooltipLabel': [{ type: core_1.Input },],
+        'enableTooltip': [{ type: core_1.Input },],
+        'onNext': [{ type: core_1.Output },],
+        'onPrevious': [{ type: core_1.Output },]
+    };
     return ImageViewerComponent;
 }());
 exports.ImageViewerComponent = ImageViewerComponent;
